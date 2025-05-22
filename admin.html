@@ -3,82 +3,33 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Admin - Data Stored</title>
+<title>Admin Dashboard</title>
 <style>
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-      Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
-    max-width: 900px;
-    margin: 2rem auto;
-    padding: 1rem;
-    background: #fff;
-    color: #222;
-  }
-  h1 {
-    font-weight: 600;
-    font-size: 2rem;
-    margin-bottom: 1rem;
-  }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.9rem;
-  }
-  th, td {
-    padding: 0.6rem 0.8rem;
-    border: 1px solid #ddd;
-    text-align: left;
-  }
-  th {
-    background: #007aff;
-    color: white;
-  }
-  tr:nth-child(even) {
-    background: #f7faff;
-  }
-  button.delete-btn {
-    background: #ff3b30;
-    border: none;
-    color: white;
-    font-weight: 600;
-    padding: 0.3rem 0.7rem;
-    border-radius: 8px;
-    cursor: pointer;
-  }
-  button.delete-btn:hover {
-    background: #c1271f;
-  }
+  body { font-family: Arial, sans-serif; }
+  table { border-collapse: collapse; width: 100%; max-width: 800px; margin: auto; }
+  th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+  th { background-color: #eee; }
 </style>
 </head>
 <body>
-
-<h1>Collected User Data</h1>
-<table id="dataTable">
+<h1>Admin Dashboard</h1>
+<table>
   <thead>
     <tr>
       <th>IP Address</th>
-      <th>Browser UserAgent</th>
-      <th>Platform</th>
-      <th>OS</th>
-      <th>Screen Res</th>
-      <th>Language</th>
-      <th>Timezone</th>
-      <th>Referrer</th>
-      <th>Date/Time</th>
-      <th>Delete</th>
+      <th>User Agent</th>
+      <th>Timestamp</th>
     </tr>
   </thead>
-  <tbody>
-    <!-- Data rows go here -->
+  <tbody id="user-data">
+    <tr><td colspan="3">Loading data...</td></tr>
   </tbody>
 </table>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-  import { getFirestore, collection, getDocs, deleteDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-analytics.js";
+  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
-  // Your Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyApoNEdlKTIhjYyCTQTjhkdsIotxs3YaKU",
     authDomain: "ip--address-catcher-12.firebaseapp.com",
@@ -90,69 +41,35 @@
     measurementId: "G-J30PRNTW1M"
   };
 
-  // Initialize Firebase
   const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-  const db = getFirestore(app);
+  const db = getDatabase(app);
+  const userDataTbody = document.getElementById('user-data');
 
-  const dataTableBody = document.querySelector("#dataTable tbody");
+  // Listen for changes to 'users' node and update table
+  onValue(ref(db, 'users'), (snapshot) => {
+    const data = snapshot.val();
+    userDataTbody.innerHTML = ''; // clear table body
 
-  async function fetchData() {
-    dataTableBody.innerHTML = "<tr><td colspan='10'>Loading...</td></tr>";
-    try {
-      const querySnapshot = await getDocs(collection(db, "userData"));
-      if (querySnapshot.empty) {
-        dataTableBody.innerHTML = "<tr><td colspan='10'>No data found.</td></tr>";
-        return;
-      }
-      dataTableBody.innerHTML = "";
-      querySnapshot.forEach(docSnap => {
-        const data = docSnap.data();
-        const id = docSnap.id;
-
-        const dateStr = data.dateTime instanceof Timestamp
-          ? data.dateTime.toDate().toLocaleString()
-          : "Unknown";
-
-        const row = document.createElement("tr");
-        row.innerHTML = `
-          <td>${data.ip || "-"}</td>
-          <td>${data.userAgent || "-"}</td>
-          <td>${data.platform || "-"}</td>
-          <td>${data.os || "-"}</td>
-          <td>${data.screenRes || "-"}</td>
-          <td>${data.language || "-"}</td>
-          <td>${data.timezone || "-"}</td>
-          <td>${data.referrer || "-"}</td>
-          <td>${dateStr}</td>
-          <td><button class="delete-btn" data-id="${id}">Delete</button></td>
-        `;
-        dataTableBody.appendChild(row);
-      });
-      attachDeleteListeners();
-    } catch (error) {
-      dataTableBody.innerHTML = `<tr><td colspan='10'>Error loading data: ${error.message}</td></tr>`;
+    if (!data) {
+      userDataTbody.innerHTML = '<tr><td colspan="3">No data available</td></tr>';
+      return;
     }
-  }
 
-  function attachDeleteListeners() {
-    document.querySelectorAll(".delete-btn").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        const id = btn.getAttribute("data-id");
-        if (confirm("Are you sure you want to delete this record?")) {
-          try {
-            await deleteDoc(doc(db, "userData", id));
-            fetchData();
-          } catch (error) {
-            alert("Error deleting record: " + error.message);
-          }
-        }
-      });
-    });
-  }
-
-  fetchData();
+    for (const key in data) {
+      if (data.hasOwnProperty(key)) {
+        const user = data[key];
+        userDataTbody.innerHTML += `
+          <tr>
+            <td>${user.ip || 'N/A'}</td>
+            <td>${user.userAgent || 'N/A'}</td>
+            <td>${user.timestamp || 'N/A'}</td>
+          </tr>
+        `;
+      }
+    }
+  }, {
+    onlyOnce: false
+  });
 </script>
-
 </body>
 </html>
