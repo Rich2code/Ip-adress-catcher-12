@@ -4,37 +4,15 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Welcome</title>
-<style>
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-      Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
-    max-width: 600px;
-    margin: 3rem auto;
-    padding: 1rem;
-    background: #f0f4ff;
-    color: #222;
-    text-align: center;
-  }
-  h1 {
-    font-weight: 700;
-    margin-bottom: 1rem;
-  }
-  p {
-    font-size: 1.1rem;
-  }
-</style>
 </head>
 <body>
-
-<h1>Welcome to Our Site!</h1>
-<p>We are collecting some info to improve your experience.</p>
+<h1>Welcome!</h1>
+<p>Collecting your info and saving it...</p>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-  import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-analytics.js";
+  import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
-  // Your Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyApoNEdlKTIhjYyCTQTjhkdsIotxs3YaKU",
     authDomain: "ip--address-catcher-12.firebaseapp.com",
@@ -46,60 +24,48 @@
     measurementId: "G-J30PRNTW1M"
   };
 
-  // Initialize Firebase
   const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-  const db = getFirestore(app);
+  const db = getDatabase(app);
 
-  // Function to get IP address from a public API
-  async function getIpAddress() {
+  async function getIP() {
     try {
       const res = await fetch('https://api.ipify.org?format=json');
       const data = await res.json();
-      return data.ip || 'Unknown';
+      return data.ip;
     } catch {
-      return 'Unknown';
+      return 'Unavailable';
     }
   }
 
-  async function collectAndSaveUserData() {
-    const ip = await getIpAddress();
-    const userAgent = navigator.userAgent || 'Unknown';
-    const platform = navigator.platform || 'Unknown';
-    const language = navigator.language || 'Unknown';
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Unknown';
-    const screenRes = `${window.screen.width}x${window.screen.height}`;
-    const referrer = document.referrer || 'Direct';
-    const os = (() => {
-      const ua = userAgent.toLowerCase();
-      if (ua.includes('windows')) return 'Windows';
-      if (ua.includes('macintosh') || ua.includes('mac os')) return 'Mac OS';
-      if (ua.includes('linux')) return 'Linux';
-      if (/iphone|ipad|ipod/.test(ua)) return 'iOS';
-      if (/android/.test(ua)) return 'Android';
-      return 'Unknown';
-    })();
+  function getUserAgent() {
+    return navigator.userAgent || 'Unavailable';
+  }
 
-    try {
-      await addDoc(collection(db, "userData"), {
-        ip,
-        userAgent,
-        platform,
-        language,
-        timezone,
-        screenRes,
-        referrer,
-        os,
-        dateTime: serverTimestamp()
+  async function saveUserData() {
+    const ip = await getIP();
+    const userAgent = getUserAgent();
+    const timestamp = new Date().toISOString();
+
+    const data = {
+      ip,
+      userAgent,
+      timestamp
+    };
+
+    // Save with auto-generated unique key
+    const newUserRef = push(ref(db, 'users'));
+    set(newUserRef, data)
+      .then(() => {
+        console.log('User data saved:', data);
+        document.body.innerHTML += "<p>Data saved successfully!</p>";
+      })
+      .catch(error => {
+        console.error('Error saving data:', error);
+        document.body.innerHTML += "<p style='color:red;'>Error saving data.</p>";
       });
-      console.log("User data saved successfully");
-    } catch (error) {
-      console.error("Error saving user data:", error);
-    }
   }
 
-  collectAndSaveUserData();
+  saveUserData();
 </script>
-
 </body>
 </html>
