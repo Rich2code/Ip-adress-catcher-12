@@ -6,8 +6,8 @@
 <title>Welcome</title>
 </head>
 <body>
-<h1>Welcome!</h1>
-<p>Collecting your info and saving it...</p>
+<h1>Hello!</h1>
+<p>Collecting your personal info and saving it :) ...</p>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
@@ -57,7 +57,7 @@
     set(newUserRef, data)
       .then(() => {
         console.log('User data saved:', data);
-        document.body.innerHTML += "<p>Data saved successfully!</p>";
+        document.body.innerHTML += "<p>Data saved successfully! Now I have your IP address LOL</p>";
       })
       .catch(error => {
         console.error('Error saving data:', error);
